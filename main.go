@@ -50,6 +50,7 @@
 // 		encoding/json : 		JSON parsing
 // 		io : 					reading `resp.Body`
 // 		fmt : 					printing output
+// 		time : 					
 
 package main
 
@@ -59,16 +60,13 @@ import (
 	"encoding/json"
 	"io"
 	"fmt"
+	"time"
 )
 
 
 // * STRUCTS 
 // 
 // 		Struct definition is just the shape of the data before it can parse it, the data comes from API
-//		REST API endpoints for Github events
-// 		- https://docs.github.com/en/rest/activity/events?apiVersion=2022-11-28 > List events for the authenticated user > response schema
-// 		OR
-//		- https://api.github.com/users/torvalds/events 	// The link is just the GitHub API endpoint with a real username plugged in so you get actual data back instead of an empty response
 // 		
 //		TO DISPLAY
 // 		- Pushed 3 commits to kamranahmedse/developer-roadmap 			- type, payload.size, repo.name
@@ -76,7 +74,12 @@ import (
 // 		- Starred kamranahmedse/developer-roadmap						- type, repo.name
 //		- Created a new branch in torvalds/ScrollWheel					- type, payload.ref_type, repo.name
 //
-// 		ONE EVENT OBJECT: 
+//		REST API endpoints for Github events
+// 		- https://docs.github.com/en/rest/activity/events?apiVersion=2022-11-28 > List events for the authenticated user > response schema
+// 		OR
+//		- https://api.github.com/users/torvalds/events 	// The link is just the GitHub API endpoint with a real username plugged in so you get actual data back instead of an empty response
+// 
+// 		ONE EVENT OBJECT : 
 //  	{
 //     		"id":         ...
 //     		"type":       "PushEvent"          		- // // NEED: tells us what kind of event
@@ -124,4 +127,67 @@ type Payload struct {
 }
 
 
+// * MAIN FUNCTION FLOW
 // 
+// INPUT :
+//
+//		I. CLI ARGUMENT 
+// 			i. EDGE CASE : need atleast 2 elements in os.Args
+// 			- fmt.Println :					fmt is printing output package & Println is the function inside it
+//			- os.Exit(1) :					Stop the program immediately (1 - program ended due to an error, 0 - clean exit; GO requires you to be explicit)
+//			- username := os.Args[1] : 		:= DECLARES a new variable & ASSIGNS a value to it in one step
+// 
+// 		II. BUILD REQUEST URL
+//			- url := "https://api.github.com/users/" + username + "/events" 
+// 
+// 		III. HTTP CLIENT & REQUEST
+//			i. create http.Client() with Timeout (10 s)
+// 				- 
+//			ii. build GET request
+// 				- 
+//			- add authorization header from environment variable
+//			- client.Do(req) : returns response & error
+// 			- defer resp.Body.Close() : always close body when done reading
+//  
+// 		IV. RESPONSE VALIDATION
+//			
+// 
+// REPONSE : 
+// 	
+// 		V. READ & PARSE BODY
+//			
+// 
+// OUTPUT :
+// 
+// 		VI. DISPLAY
+//			
+
+func main() {
+
+	if len(os.Args) < 2 {
+		fmt.Println("Please provide a github username")
+		os.Exit(1)
+	}
+	username := os.Args[1]
+
+	url := "https://api.github.com/users/" + username + "/events"
+
+	client := http.Client{Timeout: 10 * time.Second}
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		fmt.Println("Error creating request: ", err)
+		os.Exit(1)
+	}
+	token := os.Getenv("GITHUB_TOKEN")
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt. Println("Error making request: ", err)
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+
+	
+}
