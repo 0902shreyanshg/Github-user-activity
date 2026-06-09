@@ -1,6 +1,8 @@
 /*
-
+	main.go : 	github user activity CLI
+	Usage: 		github-activity <username>
 */
+
 
 // ----------------------------------------------------------------------------------------------------------------------------------
 // NOTE: CLI
@@ -59,3 +61,67 @@ import (
 	"fmt"
 )
 
+
+// * STRUCTS 
+// 
+// 		Struct definition is just the shape of the data before it can parse it, the data comes from API
+//		REST API endpoints for Github events
+// 		- https://docs.github.com/en/rest/activity/events?apiVersion=2022-11-28 > List events for the authenticated user > response schema
+// 		OR
+//		- https://api.github.com/users/torvalds/events 	// The link is just the GitHub API endpoint with a real username plugged in so you get actual data back instead of an empty response
+// 		
+//		TO DISPLAY
+// 		- Pushed 3 commits to kamranahmedse/developer-roadmap 			- type, payload.size, repo.name
+//		- Opened a new issue in kamranahmedse/developer-roadmap			- type, payload.action, repo.name
+// 		- Starred kamranahmedse/developer-roadmap						- type, repo.name
+//		- Created a new branch in torvalds/ScrollWheel					- type, payload.ref_type, repo.name
+//
+// 		ONE EVENT OBJECT: 
+//  	{
+//     		"id":         ...
+//     		"type":       "PushEvent"          		- // // NEED: tells us what kind of event
+//     		"actor":      { ... }              		- SKIP: we already know the username
+//     		"repo":       { ... }              		- // // NEED: which repo — but go inside it
+//     		"payload":    { ... }              		- // // NEED: event details — but go inside it
+//     		"public":     true                 		- SKIP
+//     		"created_at": ...                  		- SKIP for now
+// 		}
+// 		"repo": {
+//     			"id":   ...                        	- SKIP
+//     			"name": "torvalds/GuitarPedal"     	- // // NEED: this is what we display
+//     			"url":  ...                        	- SKIP
+// 		}
+// 		PushEvent payload
+// 		"payload": {
+//     			"push_id": ...                     	- SKIP
+//     			"ref":     ...                     	- SKIP
+//     			"size":    3                       	- // // NEED: number of commits pushed
+//     			"commits": [ ... ]                 	- SKIP
+// 		}
+// 		IssueCommentEvent / PullRequestEvent payload  
+// 		"payload": {
+//     			"action": "created"               	- // // NEED: opened/closed/created
+// 		}
+// 		CreateEvent payload
+// 		"payload": {
+//     			"ref_type": "branch"              	- // // NEED: what was created
+// 		}
+
+type Event struct {
+	Type 		string		`json:"type"`
+	Repo 		Repo 		`json:"repo"`
+	Payload		Payload		`json:"payload"`
+}
+
+type Repo struct {
+	Name 		string 		`json:"name"`
+}
+
+type Payload struct {
+	Size 		int 		`json:"size"`
+	Action 		string		`json:"action"`
+	RefType		string		`json:"ref_type"`
+}
+
+
+// 
