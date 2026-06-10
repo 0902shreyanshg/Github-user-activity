@@ -51,6 +51,7 @@
 // 		io : 					reading `resp.Body`
 // 		fmt : 					printing output
 // 		time : 					
+//		strings : 				
 
 package main
 
@@ -61,6 +62,7 @@ import (
 	"io"
 	"fmt"
 	"time"
+	"strings"
 )
 
 
@@ -68,18 +70,18 @@ import (
 // 
 // 		Struct definition is just the shape of the data before it can parse it, the data comes from API
 // 		
-//		TO DISPLAY
+//	*	TO DISPLAY
 // 		- Pushed 3 commits to kamranahmedse/developer-roadmap 			- type, payload.size, repo.name
 //		- Opened a new issue in kamranahmedse/developer-roadmap			- type, payload.action, repo.name
 // 		- Starred kamranahmedse/developer-roadmap						- type, repo.name
 //		- Created a new branch in torvalds/ScrollWheel					- type, payload.ref_type, repo.name
 //
-//		REST API endpoints for Github events
+//	*	REST API endpoints for Github events
 // 		- https://docs.github.com/en/rest/activity/events?apiVersion=2022-11-28 > List events for the authenticated user > response schema
 // 		OR
 //		- https://api.github.com/users/torvalds/events 	// The link is just the GitHub API endpoint with a real username plugged in so you get actual data back instead of an empty response
 // 
-// 		ONE EVENT OBJECT : 
+// 	*	ONE EVENT OBJECT : 
 //  	{
 //     		"id":         ...
 //     		"type":       "PushEvent"          		- // // NEED: tells us what kind of event
@@ -109,6 +111,9 @@ import (
 // 		"payload": {
 //     			"ref_type": "branch"              	- // // NEED: what was created
 // 		}
+//
+// * 	SYNTAX
+//		
 
 type Event struct {
 	Type 		string		`json:"type"`
@@ -127,42 +132,27 @@ type Payload struct {
 }
 
 
-// * MAIN FUNCTION FLOW
+// * MAIN FUNCTION FLOW 
 // 
 // INPUT :
-//
 //		I. CLI ARGUMENT 
-// 			i. EDGE CASE : need atleast 2 elements in os.Args
-// 			- fmt.Println :					fmt is printing output package & Println is the function inside it
-//			- os.Exit(1) :					Stop the program immediately (1 - program ended due to an error, 0 - clean exit; GO requires you to be explicit)
-//			- username := os.Args[1] : 		:= DECLARES a new variable & ASSIGNS a value to it in one step
-// 
 // 		II. BUILD REQUEST URL
-//			- url := "https://api.github.com/users/" + username + "/events" 
-// 
 // 		III. HTTP CLIENT & REQUEST
-//			i. create http.Client() with Timeout (10 s)
-// 				- 
-//			ii. build GET request
-// 				- 
-//			- add authorization header from environment variable
-//			- client.Do(req) : returns response & error
-// 			- defer resp.Body.Close() : always close body when done reading
-//  
 // 		IV. RESPONSE VALIDATION
-//			
 // 
 // REPONSE : 
-// 	
 // 		V. READ & PARSE BODY
 //			
-// 
 // OUTPUT :
-// 
 // 		VI. DISPLAY
-//			
 
 func main() {
+
+	// * I. CLI ARGUMENT 
+	// 		EDGE CASE : need atleast 2 elements in os.Args
+	// 		- fmt.Println :							fmt is printing output package & Println is the function inside it
+	//		- os.Exit(1) :							Stop the program immediately (1 - program ended due to an error, 0 - clean exit; GO requires you to be explicit)
+	//		- username := os.Args[1] : 				:= DECLARES a new variable & ASSIGNS a value to it in one step
 
 	if len(os.Args) < 2 {
 		fmt.Println("Please provide a github username")
@@ -170,18 +160,40 @@ func main() {
 	}
 	username := os.Args[1]
 
+
+	// * II. BUILD REQUEST URL
+
 	url := "https://api.github.com/users/" + username + "/events"
 
+
+	// * III. HTTP CLIENT & REQUEST
+	//		i. create http.Client() with Timeout (10 s)
+	// 			- http.Client{} : 						A struct (struct can store stuff apart from API data) that holds settings for how to make new requests
+	//		ii. build GET request
+	// 			- http.NewRequest("GET", url, nil) : 	NewRequest returns 2 things request & error; GET requests don't send any data to the server - nil
+	//		iii. add authorization header from environment variable
+	// 			- os.Getenv("GITHUB_TOKEN") : 			reads "GITHUB_TOKEN" from your system, attaches it to the request as authorization header; used to raise rate limit from 60 to 5,000 requests/hour
+	//			- req.Header.Set("Authorization", 
+	// 							"Bearer "+token)   :	attach token to the request header before sending; setting up one header named "Authorisation" with the value "Bearer"+token
+	//		iv. response
+	//			client, req, resp all come together
+	// 			- client.Do(req) : 						returns response & error
+	// 		v. closing body
+	// 			- defer resp.Body.Close() : 			always close body when done reading
+
 	client := http.Client{Timeout: 10 * time.Second}
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		fmt.Println("Error creating request: ", err)
 		os.Exit(1)
 	}
+
 	token := os.Getenv("GITHUB_TOKEN")
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt. Println("Error making request: ", err)
@@ -189,5 +201,54 @@ func main() {
 	}
 	defer resp.Body.Close()
 
+
+	// * IV. RESPONSE VALIDATION 
+
+	if resp.StatusCode == 404 {
+		fmt.Println("User not found")
+		os.Exit(1)
+	}
+	else if resp.StatusCode == 403 {
+		fmt.Println("Rate limit exceeded. Set GITHUB_TOKEN environment variable to increase limit.")
+		os.Exit(1)
+	}
+	else if resp.StatusCode == 200 {
+		fmt.Println("API Error: ", resp.StatusCode)
+		os.Exit(1)
+	}
+
+
+	// * V. READ & PARSE BODY
+	// 		i. Reading raw bytes from response
+	// 			- body, err := io.ReadAll(resp.Body) : 		body gets declared, err gets reassigned (not declared, it was declared above)
+	//		ii. mapping response to []Event struct
+	// 			- err = json.Unmarshal(body, &events) : 	we reuse err as json.Unmarshal can also fail if json is malformed or doesn't match struct
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response: ", err)
+		os.Exit(1)
+	}
+
+	var events []Event
+	err = json.Unmarshal(body, &events)
+	if err != nil {
+		fmt.Println("Error parsing response", err)
+		os.Exit(1)
+	}
+
+
+	// * VI. DISPLAY
+	// 		- for _, event := range events : 				"_" ; "range events" loops over the SLICE
+
+	for _, event := range events {
+		fmt.Println(formatEvent(event))
+	}
+}
+
+// * FORMAT EVENT (HELPER FUNCTION)
+// 
+
+func formatEvent(event Event) string {
 	
 }
