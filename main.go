@@ -71,10 +71,10 @@ import (
 // 		Struct definition is just the shape of the data before it can parse it, the data comes from API
 // 		
 //	*	TO DISPLAY
-// 		- Pushed 3 commits to kamranahmedse/developer-roadmap 			- type, payload.size, repo.name
-//		- Opened a new issue in kamranahmedse/developer-roadmap			- type, payload.action, repo.name
-// 		- Starred kamranahmedse/developer-roadmap						- type, repo.name
-//		- Created a new branch in torvalds/ScrollWheel					- type, payload.ref_type, repo.name
+// 		- Pushed 3 commits to kamranahmedse/developer-roadmap 			- type, Payload.Size, Repo.Name
+//		- Opened a new issue in kamranahmedse/developer-roadmap			- type, Payload.Action, Repo.Name
+// 		- Starred kamranahmedse/developer-roadmap						- type, Repo.Name
+//		- Created a new branch in torvalds/ScrollWheel					- type, Payload.ref_type, Repo.Name
 //
 //	*	REST API endpoints for Github events
 // 		- https://docs.github.com/en/rest/activity/events?apiVersion=2022-11-28 > List events for the authenticated user > response schema
@@ -246,9 +246,37 @@ func main() {
 	}
 }
 
+
 // * FORMAT EVENT (HELPER FUNCTION)
-// 
+// 		formatEvent(event Event) : 							the function takes one argument event of type Event (struct)
+// 		switch event.Type: 									
+//		fmt.Sprintf() : 									
+//		both action
+// 		capitalize(s string) string
+// 		strings.toUpper(s[:1] + s[1:]
 
 func formatEvent(event Event) string {
-	
+	switch event.Type {
+	case "PushEvent":
+		return fmt.Sprintf("Pushed %d commits to %s", event.Payload.Size, event.Repo.Name)
+	case "IssuesEvent":
+		return fmt.Sprintf("%s is an issue in %s", capitalize(event.Payload.Action), event.Repo.Name)
+	case "PullRequestEvent":
+		return fmt.Sprintf("%s a pull request in %s", capitalize(event.Payload.Action), event.Repo.Name)
+	case "WatchEvent":
+		return fmt.Sprintf("Starred %s", event.Repo.Name)
+	case "CreateEvent":
+		return fmt.Sprintf("Created a new %s in %s", event.Payload.RefType, event.Repo.Name)
+	case "ForkEvent":
+		return fmt.Sprintf("Forked %s", event.Repo.Name)
+	default:
+		return fmt.Sprintf("%s in %s", event.Type, event.Repo.Name)
+	}
+}
+
+func capitalize(s string) string {
+	if s == "" {
+		return ""
+	}
+	return strings.toUpper(s[:1] + s[1:])
 }
