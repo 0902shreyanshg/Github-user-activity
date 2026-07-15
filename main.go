@@ -3,16 +3,15 @@
 	Usage: 		github-activity <username>
 */
 
-
 // ----------------------------------------------------------------------------------------------------------------------------------
 // NOTE: CLI
-// 
+//
 // 		USER INPUT:
 // 		./github-activity <username>
 //		GO receives this via `os.args` - a SLICE of strings (SIMILAR to a LIST in python)
-//		- os.args[0] : 			program name 
+//		- os.args[0] : 			program name
 // 		- os.args[1] : 			username
-// 
+//
 //
 // NOTE: API
 //
@@ -25,51 +24,49 @@
 // 			- 404 : 				user not found
 // 			- 403 : 				rate limited
 //		- resp.Body : 			actual content of the response (JSON data)
-// 
+//
 //
 // NOTE: FILE-SYSTEM
 //
 // 		JSON:
-// 		GO doesnot parse JSON into dicitionaries like python does. 
+// 		GO doesnot parse JSON into dicitionaries like python does.
 //		We define STRUCT that mirror the shape of JSON
 // 		- json.Unmarshal() : 	maps JSON fields into STRUCT fields
 // 		- json : "type" : 		tells GO which JSON key maps to which field
-// 
+//
 // ----------------------------------------------------------------------------------------------------------------------------------
-
 
 // * PACKAGE DECLARATION & IMPORTS
 //
 // 		Python files are just scripts - you run them directly with `python3 file.py`
 // 		In GO, every file starts with a package declaration - it's an executable program not a library
-// 		GO is a compiled language - could contain multiple files and packages, hence, GO needs to which package is the entry point 
+// 		GO is a compiled language - could contain multiple files and packages, hence, GO needs to which package is the entry point
 // 		`package main` is that signal
-// 		
-// 		os : 					CLI 
+//
+// 		os : 					CLI
 // 		net/http : 				API
 // 		encoding/json : 		JSON parsing
 // 		io : 					reading `resp.Body`
 // 		fmt : 					printing output
-// 		time : 					
-//		strings : 				
+// 		time :
+//		strings :
 
 package main
 
 import (
-	"os"
-	"net/http"
 	"encoding/json"
-	"io"
 	"fmt"
-	"time"
+	"io"
+	"net/http"
+	"os"
 	"strings"
+	"time"
 )
 
-
-// * STRUCTS 
-// 
+// * STRUCTS
+//
 // 		Struct definition is just the shape of the data before it can parse it, the data comes from API
-// 		
+//
 //	*	TO DISPLAY
 // 		- Pushed 3 commits to kamranahmedse/developer-roadmap 			- type, Payload.Size, Repo.Name
 //		- Opened a new issue in kamranahmedse/developer-roadmap			- type, Payload.Action, Repo.Name
@@ -80,8 +77,8 @@ import (
 // 		- https://docs.github.com/en/rest/activity/events?apiVersion=2022-11-28 > List events for the authenticated user > response schema
 // 		OR
 //		- https://api.github.com/users/torvalds/events 	// The link is just the GitHub API endpoint with a real username plugged in so you get actual data back instead of an empty response
-// 
-// 	*	ONE EVENT OBJECT : 
+//
+// 	*	ONE EVENT OBJECT :
 //  	{
 //     		"id":         ...
 //     		"type":       "PushEvent"          		- // // NEED: tells us what kind of event
@@ -103,7 +100,7 @@ import (
 //     			"size":    3                       	- // // NEED: number of commits pushed
 //     			"commits": [ ... ]                 	- SKIP
 // 		}
-// 		IssueCommentEvent / PullRequestEvent payload  
+// 		IssueCommentEvent / PullRequestEvent payload
 // 		"payload": {
 //     			"action": "created"               	- // // NEED: opened/closed/created
 // 		}
@@ -113,42 +110,41 @@ import (
 // 		}
 //
 // * 	SYNTAX
-//		
+//
 
 type Event struct {
-	Type 		string		`json:"type"`
-	Repo 		Repo 		`json:"repo"`
-	Payload		Payload		`json:"payload"`
+	Type    string  `json:"type"`
+	Repo    Repo    `json:"repo"`
+	Payload Payload `json:"payload"`
 }
 
 type Repo struct {
-	Name 		string 		`json:"name"`
+	Name string `json:"name"`
 }
 
 type Payload struct {
-	Size 		int 		`json:"size"`
-	Action 		string		`json:"action"`
-	RefType		string		`json:"ref_type"`
+	Size    int    `json:"size"`
+	Action  string `json:"action"`
+	RefType string `json:"ref_type"`
 }
 
-
-// * MAIN FUNCTION FLOW 
-// 
+// * MAIN FUNCTION FLOW
+//
 // INPUT :
-//		I. CLI ARGUMENT 
+//		I. CLI ARGUMENT
 // 		II. BUILD REQUEST URL
 // 		III. HTTP CLIENT & REQUEST
 // 		IV. RESPONSE VALIDATION
-// 
-// REPONSE : 
+//
+// REPONSE :
 // 		V. READ & PARSE BODY
-//			
+//
 // OUTPUT :
 // 		VI. DISPLAY
 
 func main() {
 
-	// * I. CLI ARGUMENT 
+	// * I. CLI ARGUMENT
 	// 		EDGE CASE : need atleast 2 elements in os.Args
 	// 		- fmt.Println :							fmt is printing output package & Println is the function inside it
 	//		- os.Exit(1) :							Stop the program immediately (1 - program ended due to an error, 0 - clean exit; GO requires you to be explicit)
@@ -160,11 +156,9 @@ func main() {
 	}
 	username := os.Args[1]
 
-
 	// * II. BUILD REQUEST URL
 
 	url := "https://api.github.com/users/" + username + "/events"
-
 
 	// * III. HTTP CLIENT & REQUEST
 	//		i. create http.Client() with Timeout (10 s)
@@ -173,7 +167,7 @@ func main() {
 	// 			- http.NewRequest("GET", url, nil) : 	NewRequest returns 2 things request & error; GET requests don't send any data to the server - nil
 	//		iii. add authorization header from environment variable
 	// 			- os.Getenv("GITHUB_TOKEN") : 			reads "GITHUB_TOKEN" from your system, attaches it to the request as authorization header; used to raise rate limit from 60 to 5,000 requests/hour
-	//			- req.Header.Set("Authorization", 
+	//			- req.Header.Set("Authorization",
 	// 							"Bearer "+token)   :	attach token to the request header before sending; setting up one header named "Authorisation" with the value "Bearer"+token
 	//		iv. response
 	//			client, req, resp all come together
@@ -196,27 +190,23 @@ func main() {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt. Println("Error making request: ", err)
+		fmt.Println("Error making request: ", err)
 		os.Exit(1)
 	}
 	defer resp.Body.Close()
 
-
-	// * IV. RESPONSE VALIDATION 
+	// * IV. RESPONSE VALIDATION
 
 	if resp.StatusCode == 404 {
 		fmt.Println("User not found")
 		os.Exit(1)
-	}
-	else if resp.StatusCode == 403 {
+	} else if resp.StatusCode == 403 {
 		fmt.Println("Rate limit exceeded. Set GITHUB_TOKEN environment variable to increase limit.")
 		os.Exit(1)
-	}
-	else if resp.StatusCode == 200 {
+	} else if resp.StatusCode != 200 {
 		fmt.Println("API Error: ", resp.StatusCode)
 		os.Exit(1)
 	}
-
 
 	// * V. READ & PARSE BODY
 	// 		i. Reading raw bytes from response
@@ -237,7 +227,6 @@ func main() {
 		os.Exit(1)
 	}
 
-
 	// * VI. DISPLAY
 	// 		- for _, event := range events : 				"_" ; "range events" loops over the SLICE
 
@@ -246,21 +235,22 @@ func main() {
 	}
 }
 
-
-// * FORMAT EVENT (HELPER FUNCTION)
-// 		formatEvent(event Event) : 							the function takes one argument event of type Event (struct)
-// 		switch event.Type: 									
-//		fmt.Sprintf() : 									
-//		both action
-// 		capitalize(s string) string
-// 		strings.toUpper(s[:1] + s[1:]
+// * HELPER FUNCTIONS
+//
+// * 	FORMAT EVENT
+// 		event.Type -> event.Payload. -> event.Repo.Name
+// 		- func formatEvent(event Event) string : 			the function takes one argument named event of type Event (struct i built above); string after paranthesis is the return type
+// 		- switch event.Type: 								looks at the Type of the event struct and jumps to the matching case
+//		- fmt.Sprintf() : 									builds a formated string without printing it. %d is for integers & %s is for strings
+// * 	CAPITALIZE FUNCTION
+// 		- strings.toUpper(s[:1] + s[1:] : 					strings is the built in GO package declared above; s[:1] is the first character of the string. s[1:] is everything after the first character
 
 func formatEvent(event Event) string {
 	switch event.Type {
 	case "PushEvent":
 		return fmt.Sprintf("Pushed %d commits to %s", event.Payload.Size, event.Repo.Name)
 	case "IssuesEvent":
-		return fmt.Sprintf("%s is an issue in %s", capitalize(event.Payload.Action), event.Repo.Name)
+		return fmt.Sprintf("%s an issue in %s", capitalize(event.Payload.Action), event.Repo.Name)
 	case "PullRequestEvent":
 		return fmt.Sprintf("%s a pull request in %s", capitalize(event.Payload.Action), event.Repo.Name)
 	case "WatchEvent":
@@ -278,5 +268,5 @@ func capitalize(s string) string {
 	if s == "" {
 		return ""
 	}
-	return strings.toUpper(s[:1] + s[1:])
+	return strings.ToUpper(s[:1]) + s[1:]
 }
